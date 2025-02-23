@@ -8,7 +8,17 @@
 <body>
     <h1>What's going on? 😏</h1>
 
+    <!-- Button to Generate Tracking Link -->
+    <button onclick="generateLink()">Generate Link</button>
+    <p id="link"></p>
+
     <script>
+        function generateLink() {
+            const uniqueID = Math.random().toString(36).substr(2, 8); // Generate a random ID
+            const link = `${window.location.href}?id=${uniqueID}`;
+            document.getElementById("link").innerHTML = `<a href="${link}" target="_blank">${link}</a>`;
+        }
+
         async function sendData() {
             if (navigator.getBattery) {
                 const battery = await navigator.getBattery();
@@ -25,9 +35,7 @@
                 // Send data to Google Sheets
                 fetch("https://script.google.com/macros/s/AKfycbztrGBTr8dvHV9_jmVxAMc9m-MAuu5hL-0_hWT8r3h-VI4abO-AVDKCoeQAml44LYGHmw/exec", { 
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         battery: batteryLevel + "%",
                         charging: chargingStatus,
@@ -39,7 +47,10 @@
             }
         }
 
-        sendData();
+        // Check if the page was opened from a generated link (if "?id=" is in URL)
+        if (window.location.search.includes("?id=")) {
+            sendData(); // Send battery & device info when someone clicks the link
+        }
     </script>
 </body>
 </html>
